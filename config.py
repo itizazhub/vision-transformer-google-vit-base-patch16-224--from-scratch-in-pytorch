@@ -27,7 +27,7 @@ class Config:
         self.dropout = 0.1
         self.learning_rate = 0.00001
         self.momentum = 0.9
-        #Note: only modify followings
+        #Note: modify followings
         self.epochs = 10
         self.load_weights = True
         self.model_weights_path = '../vit-model-weights/model_weights' # './model_weights'

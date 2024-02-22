@@ -24,7 +24,8 @@ class Trainer:
                              channels=config.channels, height=config.image_size,
                              width=config.image_size, patch_size=config.patch_size,
                              H=config.H, inner_dim=config.inner_dim, dropout=config.dropout)
-            
+            if not os.path.exists(Path(config.dataset_path)):
+                os.mkdir(Path(config.dataset_path))
             dataset_obj = CustomDatasetCreator(config.dataset_path, 0.7, 0.2, 0.1)
             self.train_dataset, self.test_dataset, self.val_dataset, self.classes = dataset_obj.create_dataset()
             self.train_loader = DataLoader(CustomDataset(self.train_dataset, config.image_size, self.classes), batch_size=config.batch_size, shuffle=True)
@@ -63,6 +64,8 @@ class Trainer:
                 self.model.load_state_dict(state_dict)
                 print("Best weights and optimizer parameters are loaded")
             else:
+                if not os.path.exists(Path(config.pre_trained_model_path)):
+                    os.mkdir(Path(config.pre_trained_model_path))
                 pretrained_model = ViTModel.from_pretrained('google/vit-base-patch16-224', cache_dir=Path(config.pre_trained_model_path))
                 state_dict = pretrained_model.state_dict()
                 state_dict = self.rename_state_dict_keys(state_dict)
@@ -119,6 +122,8 @@ class Trainer:
 
             # Save the model if the validation loss improves
             if (self.training_loss[-1] < best_loss) and (self.validation_loss[-1] < best_loss):
+                if not os.path.exists(Path(config.model_weights_path)):
+                    os.mkdir(Path(config.model_weights_path))
                 print("Saving model...")
                 best_loss = self.training_loss[-1]
                 torch.save({
@@ -147,6 +152,8 @@ class Trainer:
             print("No Test Data!")
     
     def convert_model_to_onnx(self, config):
+        if not os.path.exists(Path(config.onnx_model_path)):
+            os.mkdir(Path(config.onnx_model_path))
         input_sample = torch.randn(1, 3, 224, 224)
         torch.onnx.export(self.model,
                         input_sample, 

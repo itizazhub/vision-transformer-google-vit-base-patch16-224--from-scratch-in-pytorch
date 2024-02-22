@@ -10,14 +10,18 @@ import numpy as np
 from pathlib import Path
 from config import config
 from PIL import Image
+import os
 import warnings
 warnings.filterwarnings('ignore')
+
 
 onnx_model_path = Path(config.onnx_model_path).joinpath("model.onnx")
 ort_session = onnxruntime.InferenceSession(onnx_model_path)
 
 # Prepare input data (adjust shape and data type as needed)
 # input_data = np.random.randn(1, 3, 224, 224).astype(np.float32)
+if not os.path.exists(Path(config.inference_images)):
+    os.mkdir(Path(config.inference_images))
 
 image_path = Path(config.inference_images).joinpath(config.inference_image_name)
 image = Image.open(image_path)
