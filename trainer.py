@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import logging
 import os
+import math
 
 class Trainer:
     def __init__(self, config):
@@ -27,10 +28,13 @@ class Trainer:
             if not os.path.exists(Path(config.dataset_path)):
                 os.mkdir(Path(config.dataset_path))
             dataset_obj = CustomDatasetCreator(config.dataset_path, 0.7, 0.2, 0.1)
-            self.train_dataset, self.test_dataset, self.val_dataset, self.classes = dataset_obj.create_dataset()
-            self.train_loader = DataLoader(CustomDataset(self.train_dataset, config.image_size, self.classes), batch_size=config.batch_size, shuffle=True)
-            self.test_loader = DataLoader(CustomDataset(self.test_dataset, config.image_size, self.classes), batch_size=1, shuffle=False)
-            self.val_loader = DataLoader(CustomDataset(self.val_dataset, config.image_size, self.classes), batch_size=config.batch_size, shuffle=True)
+            self.train_dataset, self.test_dataset, self.val_dataset, self.classes = dataset_obj.create_dataset(random_state=42)
+            self.train_set = CustomDataset(self.train_dataset, config.image_size, self.classes)
+            self.test_set = CustomDataset(self.test_dataset, config.image_size, self.classes)
+            self.val_set = CustomDataset(self.val_dataset, config.image_size, self.classes)
+            self.train_loader = DataLoader(self.train_set, batch_size=config.batch_size, shuffle=True)
+            self.test_loader = DataLoader(self.test_set, batch_size=1, shuffle=False)
+            self.val_loader = DataLoader(self.val_set, batch_size=config.batch_size, shuffle=True)
         else:
             mnist_dataset_obj = datasets.MNIST(root=config.mnist_path, train=True, download=True,
                                                transform=transforms.Compose([
@@ -56,13 +60,13 @@ class Trainer:
     def trainer(self, config):
         logging.basicConfig(filename='training.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         if config.load_weights:
-            if os.path.exists(Path(config.model_weights_path).joinpath("best.pth")):
-                checkpoint = torch.load(Path(config.model_weights_path).joinpath("best.pth"))
+            checkpoint_path = Path(config.model_weights_path).joinpath("best.pth")
+            if os.path.exists(checkpoint_path):
+                checkpoint = torch.load(checkpoint_path)
                 self.model.load_state_dict(checkpoint['model_state_dict'])
                 self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-                state_dict = torch.load(Path(config.model_weights_path).joinpath("best.pth"))
-                self.model.load_state_dict(state_dict)
                 print("Best weights and optimizer parameters are loaded")
+
             else:
                 if not os.path.exists(Path(config.pre_trained_model_path)):
                     os.mkdir(Path(config.pre_trained_model_path))
@@ -73,8 +77,12 @@ class Trainer:
                 print("Pre-trained weights are loaded")
         else:
             print("Training from scratch")
-
+        print("Device: ", self.device)
+        print("Training data: ", self.train_set.__len__())
+        print("validation data: ", self.val_set.__len__())
+        print("Test data: ", self.test_set.__len__())
         print("----Training started----")
+        # total_batches = math.floor(self.train_set.__len__() / config.batch_size)
         best_loss = float("inf")
         for epoch in range(config.epochs):
             print(f"{epoch}: Epoch")
@@ -82,11 +90,16 @@ class Trainer:
             correct_predictions = 0
             total_samples = 0
             losses = []
+            # i = 0
             for img, label in iter(self.train_loader):
+                # i += 1
                 self.optimizer.zero_grad()
-                print(img.shape)
-                img, label = torch.tensor(img).to(self.device), torch.tensor(label).to(self.device)
-                print(img.shape)
+                # print(img.shape)
+                img, label = torch.tensor(img), torch.tensor(label)
+                # print(img.shape)
+                img = img.to(self.device)
+                label = label.to(self.device)
+                self.model.to(self.device)
                 pred = self.model(img)
                 loss = self.criterion(pred, label)
                 losses.append(loss.item())
@@ -96,6 +109,9 @@ class Trainer:
                 _, predicted_labels = torch.max(pred, 1)
                 correct_predictions += (predicted_labels == label).sum().item()
                 total_samples += label.size(0)
+                # if total_batches == i:
+                #   break
+            # print(i)
             self.training_loss.append(sum(losses) / len(losses))
             self.training_accuracy.append(correct_predictions / total_samples)
             
@@ -105,8 +121,14 @@ class Trainer:
             total_samples = 0
             self.model.eval()
             with torch.no_grad():
+                # i = 0
+                # total_batches = math.floor(self.val_set.__len__() / config.batch_size)
                 for img, label in iter(self.val_loader):
-                    img, label = torch.tensor(img).to(self.device), torch.tensor(label).to(self.device)
+                    # i += 1
+                    img, label = torch.tensor(img), torch.tensor(label)
+                    img = img.to(self.device)
+                    label = label.to(self.device)
+                    self.model.to(self.device)
                     pred = self.model(img)
                     loss = self.criterion(pred, label)
                     losses.append(loss.item())
@@ -114,11 +136,13 @@ class Trainer:
                     _, predicted_labels = torch.max(pred, 1)
                     correct_predictions += (predicted_labels == label).sum().item()
                     total_samples += label.size(0)
+                    # if i == total_batches:
+                    #   break
             self.validation_loss.append(sum(losses) / len(losses))
             self.validation_accuracy.append(correct_predictions / total_samples)
 
             logging.info(f'Epoch: {epoch}, Training Loss: {self.training_loss[-1]}, Training Accuracy: {self.training_accuracy[-1]}, Validation Loss: {self.validation_loss[-1]}, Validation Accuracy: {self.validation_accuracy[-1]}')
-            (f'Epoch: {epoch}, Training Loss: {self.training_loss[-1]}, Training Accuracy: {self.training_accuracy[-1]}, Validation Loss: {self.validation_loss[-1]}, Validation Accuracy: {self.validation_accuracy[-1]}')
+            print(f'Epoch: {epoch}, Training Loss: {self.training_loss[-1]}, Training Accuracy: {self.training_accuracy[-1]}, Validation Loss: {self.validation_loss[-1]}, Validation Accuracy: {self.validation_accuracy[-1]}')
 
             # Save the model if the validation loss improves
             if (self.training_loss[-1] < best_loss) and (self.validation_loss[-1] < best_loss):
@@ -129,8 +153,7 @@ class Trainer:
                 torch.save({
                             'model_state_dict': self.model.state_dict(),
                             'optimizer_state_dict': self.optimizer.state_dict(),
-                            }, Path(config.model_weights_path).joinpath("best.pth"))
-                torch.save(self.model.state_dict(), Path(config.model_weights_path) / "best.pth")
+                        }, Path(config.model_weights_path).joinpath("best.pth"))
                 print("---Best weights and optimizer parameters are saved---")
     def test(self, config):
         if config.custom_dataset:
@@ -139,8 +162,11 @@ class Trainer:
             correct_predictions = 0
             total_samples = 0
             with torch.no_grad():
-                for img, label in iter(self.test_dataset):
-                        img, label = torch.tensor(img).to(self.device), torch.tensor(label).to(self.device)
+                for img, label in iter(self.test_loader):
+                        img, label = torch.tensor(img), torch.tensor(label)
+                        img = img.to(self.device)
+                        label = label.to(self.device)
+                        self.model.to(self.device)
                         pred = self.model(img)
                         loss = self.criterion(pred, label)
                         losses.append(loss)

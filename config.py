@@ -9,8 +9,8 @@ class Config:
     def __init__(self):
         # Dataset options
         self.custom_dataset = True
-        self.dataset_path = '../vit-datasets/custom_dataset/EuroSAT' # './custom_dataset'
-        self.mnist_path =  './' # '../vit-datasets/MNIST_dataset'
+        self.dataset_path = '/content/vision-transformer-google-vit-base-patch16-224--from-scratch-in-pytorch/EuroSAT'
+        self.mnist_path =  './'
         self.classes = 10
         self.mnist_classes = 10
         self.image_size = 224
@@ -30,7 +30,7 @@ class Config:
         #Note: modify followings
         self.epochs = 10
         self.load_weights = True
-        self.model_weights_path = '../vit-model-weights/model_weights' # './model_weights'
+        self.model_weights_path = './model_weights'
         self.pre_trained_model_path = './pre_trained_model'
         self.onnx_model_path = './onnx_model'
         self.inference_images = './inference_images'

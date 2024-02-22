@@ -2,14 +2,15 @@ import pandas as pd
 from PIL import Image
 from pathlib import Path
 import torchvision.transforms as transforms
+from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 import math
 import os
 
 class CustomDataset(Dataset):
-    def __init__(self, dataset: pd.DataFrame, image_size: int, classes:list) -> None:
+    def __init__(self, dataset_tuple: tuple, image_size: int, classes: list) -> None:
         super().__init__()
-        self.dataset = dataset
+        self.file_paths, self.labels = dataset_tuple
         self.classes = classes
         self.image_size = image_size
         self.transformation = transforms.Compose([
@@ -19,39 +20,36 @@ class CustomDataset(Dataset):
         ])
 
     def __len__(self):
-        return len(self.dataset)
+        return len(self.file_paths)
 
     def __getitem__(self, idx):
-        image_path = self.dataset['image_path'][idx]
-        label = self.dataset['label'][idx]
+        image_path = self.file_paths[idx]
+        label = self.labels[idx]
         image = Image.open(image_path)
         return self.transformation(image), label
 
 class CustomDatasetCreator:
-    def __init__(self, dataset_path: str, train_ratio: float = 0.7, test_ratio: float = 0.2, val_ratio: float = 0.1):
+    def __init__(self, dataset_path: str, train_ratio: float = 0.7, val_ratio: float = 0.2, test_ratio: float = 0.1):
         self.dataset_path = Path(dataset_path)
         self.train_ratio = train_ratio
         self.test_ratio = test_ratio
         self.val_ratio = val_ratio
         self.labels = [label for label in os.listdir(self.dataset_path) if os.path.isdir(self.dataset_path.joinpath(label))]
 
-    def create_dataset(self) -> tuple:
-        all_files = {'image_path': [], 'label': []}
+    def create_dataset(self, random_state: int = None) -> tuple:
+        # Load file paths and labels
+        all_files = []
+        all_labels = []
         for i, label in enumerate(self.labels):
             image_files = list(self.dataset_path.joinpath(label).glob('*'))
-            all_files['image_path'].extend(image_files)
-            all_files['label'].extend([i] * len(image_files))
-        dataset = pd.DataFrame(all_files)
-        shuffled_dataset = dataset.sample(frac=1).reset_index(drop=True)
+            all_files.extend(image_files)
+            all_labels.extend([i] * len(image_files))
         
-        train_end_idx = math.floor(self.train_ratio * len(shuffled_dataset))
-        test_end_idx = train_end_idx + math.floor(self.test_ratio * len(shuffled_dataset))
+        # Split dataset into train, test, and validation sets
+        train_files, test_val_files, train_labels, test_val_labels = train_test_split(all_files, all_labels, test_size=self.test_ratio+self.val_ratio, random_state=random_state)
+        val_files, test_files, val_labels, test_labels = train_test_split(test_val_files, test_val_labels, test_size=self.test_ratio/(self.test_ratio+self.val_ratio), random_state=random_state)
         
-        train_set = shuffled_dataset.iloc[:train_end_idx]
-        test_set = shuffled_dataset.iloc[train_end_idx:test_end_idx]
-        val_set = shuffled_dataset.iloc[test_end_idx:]
-        
-        return train_set, test_set, val_set, self.labels
+        return (train_files, train_labels), (test_files, test_labels), (val_files, val_labels), self.labels
 
 
 #test classes
