@@ -225,7 +225,7 @@ class Trainer:
     
 
     def plot_result(self, config):
-        epochs = config.epochs
+        epochs = range(1, config.epochs + 1)
 
         plt.figure(figsize=(12, 6))
 
