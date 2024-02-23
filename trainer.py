@@ -6,7 +6,7 @@ import torch.optim as optim
 import torch.nn as nn
 from vit_model.vit import Vit
 import torch
-import matplotlib.pyplot as plt
+import pandas as pd
 from pathlib import Path
 import logging
 import os
@@ -222,33 +222,21 @@ class Trainer:
             new_state_dict[name] = param
             
         return new_state_dict
-    
 
-    def plot_result(self, config):
-        epochs = range(1, config.epochs + 1)
+    def save_to_dataframe(self,config):
+        data = {
+            'training_loss': self.training_loss,
+            'training_accuracy': self.training_accuracy,
+            'validation_loss': self.validation_loss,
+            'validation_accuracy': self.validation_accuracy
+        }
+        df = pd.DataFrame(data)
+        if not os.path.exists(Path(config.result_folder_path)):
+            os.mkdir(Path(config.result_folder_path))
+        df.to_csv(Path(config.result_folder_path).joinpath("results.csv"), index=False)
+        df_classes = pd.DataFrame(self.classes)
+        df_classes.to_csv(Path(config.result_folder_path).joinpath("classes.csv"), index=False)
 
-        plt.figure(figsize=(12, 6))
-
-        # Plot training loss
-        plt.subplot(1, 2, 1)
-        plt.plot(epochs, self.training_loss, 'b', label='Training loss')
-        plt.plot(epochs, self.validation_loss, 'r', label='Validation loss')
-        plt.title('Training and validation loss')
-        plt.xlabel('Epochs')
-        plt.ylabel('Loss')
-        plt.legend()
-
-        # Plot training accuracy
-        plt.subplot(1, 2, 2)
-        plt.plot(epochs, self.training_accuracy, 'b', label='Training accuracy')
-        plt.plot(epochs, self.validation_accuracy, 'r', label='Validation accuracy')
-        plt.title('Training and validation accuracy')
-        plt.xlabel('Epochs')
-        plt.ylabel('Accuracy')
-        plt.legend()
-
-        plt.tight_layout()
-        plt.show()
 
 
 

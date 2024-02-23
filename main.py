@@ -11,6 +11,6 @@ if __name__ == "__main__":
     trainer_obj.trainer(config=config)
     trainer_obj.test(config=config)
     trainer_obj.convert_model_to_onnx(config=config)
-    trainer_obj.plot_result(config=config)
+    trainer_obj.save_to_dataframe(config=config)
 
 

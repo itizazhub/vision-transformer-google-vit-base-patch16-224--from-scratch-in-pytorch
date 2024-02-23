@@ -9,7 +9,7 @@ class Config:
     def __init__(self):
         # Dataset options
         self.custom_dataset = True
-        self.dataset_path = '/content/vision-transformer-google-vit-base-patch16-224--from-scratch-in-pytorch/EuroSAT'
+        self.dataset_path = '/content/EuroSAT'
         self.mnist_path =  './'
         self.classes = 10
         self.mnist_classes = 10
@@ -28,13 +28,14 @@ class Config:
         self.learning_rate = 0.00001
         self.momentum = 0.9
         #Note: modify followings
-        self.epochs = 10
+        self.epochs = 5
         self.load_weights = True
         self.model_weights_path = './model_weights'
         self.pre_trained_model_path = './pre_trained_model'
         self.onnx_model_path = './onnx_model'
         self.inference_images = './inference_images'
-        self.inference_image_name = 'image.jpg'
+        self.inference_image_name = 'test_image.jpg'
+        self.result_folder_path = './results'
                
 
 # Global variable to hold the configuration
