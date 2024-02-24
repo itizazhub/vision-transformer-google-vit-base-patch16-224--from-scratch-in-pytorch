@@ -31,4 +31,5 @@ else:
 
         df = pd.read_csv(Path(config.result_folder_path).joinpath("classes.csv"))
         output_data = outputs[0]
-        print(output_data.shape)
+        index = np.argmax(output_data)
+        print(f"Orignal label: {image} and Predicted lable: {df['0'].iloc[index]}")
